@@ -1,10 +1,12 @@
 # gepher
 
-A Clojure library designed to ... well, that part is up to you.
+A Clojure library designed to convert list of nodes or json to gexf
 
 ## Usage
 
-FIXME
+look at /test/gepher/core_test.clj for in clojure usage
+
+for cli usage there is --file argument for cpecify json file to convert
 
 ## License
 
