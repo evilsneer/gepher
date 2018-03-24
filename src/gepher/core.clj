@@ -11,7 +11,7 @@
   [["-f" "--file FILE" "Path to convert file"]
    ["-h" "--help"]])
 
-;;; necessaries keys
+;;; Necessaries keys
 (def LABEL :label)
 (def ID :id)
 (def MAIN-ARGS [LABEL ID])
@@ -30,6 +30,7 @@
   "Return now time in YYYY-MM-DD format."
   (format-time (localtime/local-now)))
 
+
 ;;; Necessaries
 (defn- str-keys->keywords-keys [d]
   "Convert str to keyword in keys of `d` dict."
@@ -45,13 +46,16 @@
 (defn- update-map [f m]
   "Apply `f` function to `m` hash-map "
   ; (reduce-kv (fn [m k v]
-    ; (assoc m k (f v))) {} m))
+    ; (assoc m k (f v))) {} m)) ;; hmm lets try something simplier
   (zipmap (keys m) (map f (vals m))))
+
 
 ;;; Conversions
 (defn- node->id [node]
   (:id node))
 
+
+;; Attributes
 (defn coll->gexf-attr-type [c]
   "Convert `c` to one of types for gexf = [boolean, string, float] based on types of elements in `c`"
   (cond
@@ -81,8 +85,8 @@
     flatten
     (apply hash-map)))
 
-
 (defn- edges->nodes-attributes-representation [e]
+  "Convert edges to nodes attributes representation in hiccup/html gexf format."
   (->> e
     edges->attributes-mem
     seq
@@ -91,25 +95,37 @@
     (conj [:attributes {:class "node"}])))
 
 (defn- node->attvalues [n att-id-map]
+  "Convert node to attributes representation in hiccup/html gexf format."
   (->> att-id-map
     (filter (fn [[k v]] (some? (k n))))
     (map (fn [[k v]] [:attvalue {:for v :value (k n)}]))
     (apply vector)))
 
-(defn- node->node-representation [att-id-map n]
-  (into [] (concat [:node {:id (:id n) :label (:label n)}] (node->attvalues n att-id-map))))
 
-(defn- edge->edge-representation [e]
-  (let [[i [fe se]] e]
-    [:edge {:id i :source fe :target se}]))
+;; Nodes
+(defn- node->node-representation [att-id-map n]
+  "Convert node to representation in hiccup/html gexf format."
+  (into [] 
+    (concat 
+      [:node {:id (:id n) :label (:label n)}] 
+      (node->attvalues n att-id-map))))
 
 (defn edges->node-representations [edges att-id-map]
+  "Convert edges to node representations in hiccup/html gexf format."
   (->> edges
        flatten
        set
        (map (partial node->node-representation att-id-map))))
 
+
+;; Edges
+(defn- edge->edge-representation [e]
+  "Convert one edge to representation in hiccup/html gexf format."
+  (let [[i [fe se]] e]
+    [:edge {:id i :source fe :target se}]))
+
 (defn edges->edge-representations [edges]
+  "Convert edges to edges representation in hiccup/html gexf format."
   (->> edges
     (map #(map node->id %))
     (map-indexed vector)
@@ -141,9 +157,3 @@
                          (map #(map str-keys->keywords-keys %)))]
         (println (edges->gexf content)))
       (println "Specify file with -f arg"))))
-        ; (println @(st/save storage
-        ;                    (get-filename!)
-        ;                    (gepher/edges->gexf
-        ;                      (get-full-edges folder hide)))))))
-
-;(edges->gexf test-data)
