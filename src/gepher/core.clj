@@ -16,54 +16,73 @@
 (def ID :id)
 (def MAIN-ARGS [LABEL ID])
 
+(def td ['({:label ":ROOT", :id 0, :deep 1 :food "3"}
+           {:label "project.clj", :id 13, :deep 2})
+         '({:label ":ROOT", :id 0, :deep 1}
+           {:label "LICENSE", :id 14, :deep 2})])
+
+;;; Time format functions for gexf metadata
 (defn- format-time [t]
-  "Format time for this project"
+  "Format time for this project. `t` is localtime obj."
   (format/unparse (format/formatter "YYYY-MM-dd") t))
 
 (defn- now []
-  "Return now time in YYYY-MM-DD format"
+  "Return now time in YYYY-MM-DD format."
   (format-time (localtime/local-now)))
 
-(defn- node->id [node]
-  (:id node))
+;;; Necessaries
+(defn- str-keys->keywords-keys [d]
+  "Convert str to keyword in keys of `d` dict."
+  (zipmap (map keyword (keys d)) (vals d)))
 
 (defn- in? [i c]
+  "True if `i` item in `c` collection."
   (boolean (some (partial = i) c)))
 
+;; Why it is not in clojure.core? I dont know
 (def boolean? (partial instance? Boolean))
 
 (defn- update-map [f m]
-  (reduce-kv (fn [m k v]
-    (assoc m k (f v))) {} m))
+  "Apply `f` function to `m` hash-map "
+  ; (reduce-kv (fn [m k v]
+    ; (assoc m k (f v))) {} m))
+  (zipmap (keys m) (map f (vals m))))
 
-(defn items->gexf-attr-type [c]
+;;; Conversions
+(defn- node->id [node]
+  (:id node))
+
+(defn coll->gexf-attr-type [c]
+  "Convert `c` to one of types for gexf = [boolean, string, float] based on types of elements in `c`"
   (cond
     (every? boolean? c) "boolean"
     (some string? c) "string"
     :else "float"))
 
 (defn- edges->attributes [e]
+  "Convert edges to attributes"
   (->> e
     flatten
     (mapcat identity)
     (filter (fn [[k v]] (not (in? k [:id :label]))))
     (map (fn [[k v]] {k [v]}))
     (apply merge-with into)
-    (update-map items->gexf-attr-type)))
+    (update-map coll->gexf-attr-type)))
 
 (def edges->attributes-mem (memoize edges->attributes))
 
 (defn- edges->attribute-attrid-map [e]
+  "Convert edges to {:attrkey attrid}."
   (->> e
     edges->attributes-mem
     keys
     (map-indexed vector)
     (map reverse)
     flatten
-    (apply hash-map)
-    ))
+    (apply hash-map)))
 
-(defn- edges->nodes-attributes-vector [e]
+
+(defn- edges->nodes-attributes-representation [e]
   (->> e
     edges->attributes-mem
     seq
@@ -75,40 +94,42 @@
   (->> att-id-map
     (filter (fn [[k v]] (some? (k n))))
     (map (fn [[k v]] [:attvalue {:for v :value (k n)}]))
-    flatten
     (apply vector)))
 
 (defn- node->node-representation [att-id-map n]
-  (conj [:node {:id (:id n) :label (:label n)}] (node->attvalues n att-id-map)))
+  (into [] (concat [:node {:id (:id n) :label (:label n)}] (node->attvalues n att-id-map))))
 
 (defn- edge->edge-representation [e]
   (let [[i [fe se]] e]
     [:edge {:id i :source fe :target se}]))
 
+(defn edges->node-representations [edges att-id-map]
+  (->> edges
+       flatten
+       set
+       (map (partial node->node-representation att-id-map))))
+
+(defn edges->edge-representations [edges]
+  (->> edges
+    (map #(map node->id %))
+    (map-indexed vector)
+    (map edge->edge-representation)))
+
 (defn edges->gexf
   "Convert `edges`= [({:id 1 :label 42} {:id 2 :label 34})] to gexf file"
   ([edges] (edges->gexf edges "directed"))
   ([edges type]
-    (let [attr->attrid (edges->attribute-attrid-map edges)]
-     (let [graph-body [:graph {:mode "static" :defaultedgetype type}
-                              (edges->nodes-attributes-vector edges)
-                              [:nodes (->> edges
-                                           flatten
-                                           set
-                                       (map (partial node->node-representation attr->attrid)))]
-                              [:edges (->> edges
-                                        (map #(map node->id %))
-                                        (map-indexed vector)
-                                        (map edge->edge-representation))]]]
-          (str "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-               (hiccup/html  [:gexf {:xmlns "http://www.gexf.net/1.2draft" :version "1.2"}
-                              [:meta {:lastmodifieddate (now)}
-                                [:creator "Gepher"]
-                                [:description "DESCRIPTION"]]
-                                graph-body]))))))
-
-(defn- str-keys->keywords-keys [col]
-  (zipmap (map keyword (keys col)) (vals col)))
+   (let [attr->attrid (edges->attribute-attrid-map edges)]
+    (let [graph-body [:graph {:mode "static" :defaultedgetype type}
+                             (edges->nodes-attributes-representation edges)
+                             [:nodes (edges->node-representations edges attr->attrid)]
+                             [:edges (edges->edge-representations edges)]]]
+         (str "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+              (hiccup/html  [:gexf {:xmlns "http://www.gexf.net/1.2draft" :version "1.2"}
+                             [:meta {:lastmodifieddate (now)}
+                               [:creator "Gepher"]
+                               [:description "DESCRIPTION"]]
+                             graph-body]))))))
 
 (defn -main [& args]
   "Start point."
