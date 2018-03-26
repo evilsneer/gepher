@@ -21,7 +21,6 @@ there is --file argument for cpecify json file to convert
 
 ## License
 
-Copyright © 2018 FIXME
+Copyright © 2018 Vladislav Shishkov
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+Distributed under the MIT License.
