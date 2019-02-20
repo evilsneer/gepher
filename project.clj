@@ -11,5 +11,6 @@
                  [clj-time "0.14.2"]
                  [org.clojure/data.json "0.2.6"]
                  [animated-gif-clj "0.1.0-SNAPSHOT"]
-                 [net.mikera/imagez "0.12.0"]]
+                 [net.mikera/imagez "0.12.0"]
+                 [aysylu/loom "1.0.2"]]
   :main ^:skip-aot gepher.core)

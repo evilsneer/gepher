@@ -1,6 +1,8 @@
 (ns gepher.recursion-search
   (:require [clojure.pprint :as pp]
-            [gepher.vis :as vis]))
+            [gepher.vis :as vis]
+            [loom.graph :as lg]
+            [loom.alg :as la]))
 
 (defn find_childs [edges]
   (apply
@@ -37,3 +39,6 @@
         (plotlog colors index node))
       (if (= 0 (get @colors node))
         (cy-do dict-node-childs colors node)))))
+
+(defn is-cyclic-2? [edges]
+  (la/dag? (apply lg/digraph edges)))

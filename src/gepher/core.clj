@@ -162,5 +162,6 @@
                     slurp
                     json/read-str
                     (map (fn [x] (map (fn [x1] (or (get x1 "id") 0)) x))))]
-        (rs/is-cyclic? edges))
+        (println (rs/is-cyclic? edges))
+        (println (rs/is-cyclic-2? edges)))
       (println "Specify file with -c arg for check"))))
