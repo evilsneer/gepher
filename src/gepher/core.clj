@@ -3,12 +3,14 @@
             [clojure.tools.cli :refer [parse-opts]]
             [clj-time.local :as localtime]
             [clj-time.format :as format]
-            [clojure.data.json :as json])
+            [clojure.data.json :as json]
+            [gepher.recursion-search :as rs])
   (:gen-class :main true))
 
 (def cli-options
   ;; An option with a required argument.
   [["-f" "--file FILE" "Path to convert file"]
+   ["-c" "--check FILE" "Check file for loops"]
    ["-h" "--help"]])
 
 ;;; Necessaries keys
@@ -152,4 +154,13 @@
                       json/read-str
                       (map #(map str-keys->keywords-keys %)))]
         (println (edges->gexf content)))
-      (println "Specify file with -f arg"))))
+      (println "Specify file with -f arg for convert"))
+
+    (if-let [file (get opt :check)]
+      ;(println file)
+      (let [edges (->> file
+                    slurp
+                    json/read-str
+                    (map (fn [x] (map (fn [x1] (or (get x1 "id") 0)) x))))]
+        (rs/is-cyclic? edges))
+      (println "Specify file with -c arg for check"))))
